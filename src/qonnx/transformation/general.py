@@ -34,6 +34,8 @@ from toposort import toposort_flatten
 
 import qonnx.util.basic as util
 from qonnx.transformation.base import Transformation
+from onnx import helper, TensorProto
+
 
 
 class MovePadAttributeToTensor(Transformation):
@@ -96,6 +98,44 @@ class RemoveUnusedTensors(Transformation):
                 onnx_graph.quantization_annotation.remove(qa)
                 graph_modified = True
 
+        return (model, graph_modified)
+    
+class FillEmptyRoI(Transformation):
+    "Fill empty RoI input tensor of Resize node if is empty to avoid issues during shape inference"
+
+    def apply(self, model):
+        graph_modified = False
+        for node in model.graph.node:
+            if node.op_type == 'Resize':
+                # Assuming 'roi' is the second input 
+                if len(node.input) > 2 and node.input[1] == '':
+                    empty_roi_tensor = helper.make_tensor(
+                        name=node.name + "_empty_roi",
+                        data_type=TensorProto.FLOAT,
+                        dims=[0],
+                        vals=[]
+                    )
+                    model.graph.initializer.append(empty_roi_tensor)
+                    node.input[1] = node.name + '_empty_roi'
+                    graph_modified = True
+
+        return (model, graph_modified)
+    
+class EmptyFilledRoI(Transformation):
+    "Remove RoI tensor of Resize node added for shape inference"
+
+    def apply(self, model):
+        graph_modified = False
+        for node in model.graph.node:
+            if node.op_type == 'Resize':
+                # Assuming 'roi' is the second input 
+                if len(node.input) > 2 and node.input[1] != '':
+                    init_names = [x.name for x in model.graph.initializer]
+                    i = init_names.index(node.input[1])
+                    init_to_remove = model.graph.initializer[i]
+                    model.graph.initializer.remove(init_to_remove)
+                    node.input[1] = ''
+                    graph_modified = True
         return (model, graph_modified)
 
 

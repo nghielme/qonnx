@@ -40,7 +40,7 @@ from qonnx.util.basic import get_by_name
 
 # Standard ONNX nodes which require a ChannelsLast data format to function properly
 _channelsLast_node_types = list(channels_last.custom_op.keys())
-_channelsLast_special_node_types = ['Resize', 'Upsample', 'Concat']
+_channelsLast_special_node_types = ['Resize', 'Upsample', 'Concat', 'Add']
 
 # Nodes, which do not modify the shape of the tensor
 # And modify all values in the same way.
@@ -289,8 +289,7 @@ class InsertChannelsLastDomainsAndTrafos(Transformation):
                         model.set_initializer(inp, scales)
                         continue
                     if (n.op_type == "Concat") and (i == 0):
-                        s = len(model.get_tensor_shape(inp))
-                        get_by_name(n.attribute, "axis").i = s - 1
+                        get_by_name(n.attribute, "axis").i = -1
                     insert_transpose_to_input(model, inp, graph, running_node_index, n, i)
                 
                 output_tensors = n.output
