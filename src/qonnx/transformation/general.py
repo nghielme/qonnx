@@ -30,11 +30,12 @@ import json
 import numpy as np
 import warnings
 from onnx import mapping
+import onnx
 from toposort import toposort_flatten
 
 import qonnx.util.basic as util
 from qonnx.transformation.base import Transformation
-from onnx import helper, TensorProto
+from onnx import helper
 
 
 
@@ -99,44 +100,57 @@ class RemoveUnusedTensors(Transformation):
                 graph_modified = True
 
         return (model, graph_modified)
+
+# class FillEmptyRoI(Transformation):
+#     "Fill empty RoI input tensor of Resize node if is empty to avoid issues during shape inference"
+
+#     def apply(self, model):
+#         graph_modified = False
+#         for i, node in enumerate(model.graph.node):
+#             if node.op_type == 'Resize':
+#                 # Assuming 'roi' is the second input 
+#                 if len(node.input) > 2 and node.input[1] == '':
+#                     roi = onnx.numpy_helper.from_array(np.empty([0], dtype=np.float32), node.name + "_roi")
+#                     model.graph.initializer.append(roi)
+#                     roi_value_info = helper.make_tensor_value_info(node.name + "_roi", onnx.TensorProto.FLOAT, [0])
+#                     model.graph.value_info.append(roi_value_info)
+#                     inputs = [node.input[0], node.name + "_roi", node.input[2]]
+           
+#                     mode_string = ''
+#                     for attr in model.graph.node[i].attribute:
+#                         if attr.name == 'mode':
+#                             mode_string = attr.s
+#                     new_node = onnx.helper.make_node(
+#                         "Resize",
+#                         coordinate_transformation_mode="asymmetric",
+#                         cubic_coeff_a=-0.75,
+#                         mode=mode_string,
+#                         nearest_mode="floor",
+#                         inputs=inputs,
+#                         outputs=node.output
+#                     )
+#                     model.graph.node.remove(node)
+#                     model.graph.node.insert(i, new_node)
+#                     graph_modified = True
+
+#         return (model, graph_modified)
     
-class FillEmptyRoI(Transformation):
-    "Fill empty RoI input tensor of Resize node if is empty to avoid issues during shape inference"
+# class EmptyFilledRoI(Transformation):
+#     "Remove RoI tensor of Resize node added for shape inference"
 
-    def apply(self, model):
-        graph_modified = False
-        for node in model.graph.node:
-            if node.op_type == 'Resize':
-                # Assuming 'roi' is the second input 
-                if len(node.input) > 2 and node.input[1] == '':
-                    empty_roi_tensor = helper.make_tensor(
-                        name=node.name + "_empty_roi",
-                        data_type=TensorProto.FLOAT,
-                        dims=[0],
-                        vals=[]
-                    )
-                    model.graph.initializer.append(empty_roi_tensor)
-                    node.input[1] = node.name + '_empty_roi'
-                    graph_modified = True
-
-        return (model, graph_modified)
-    
-class EmptyFilledRoI(Transformation):
-    "Remove RoI tensor of Resize node added for shape inference"
-
-    def apply(self, model):
-        graph_modified = False
-        for node in model.graph.node:
-            if node.op_type == 'Resize':
-                # Assuming 'roi' is the second input 
-                if len(node.input) > 2 and node.input[1] != '':
-                    init_names = [x.name for x in model.graph.initializer]
-                    i = init_names.index(node.input[1])
-                    init_to_remove = model.graph.initializer[i]
-                    model.graph.initializer.remove(init_to_remove)
-                    node.input[1] = ''
-                    graph_modified = True
-        return (model, graph_modified)
+#     def apply(self, model):
+#         graph_modified = False
+#         for node in model.graph.node:
+#             if node.op_type == 'Resize':
+#                 # Assuming 'roi' is the second input 
+#                 if len(node.input) > 2 and node.input[1] != '':
+#                     init_names = [x.name for x in model.graph.initializer]
+#                     i = init_names.index(node.input[1])
+#                     init_to_remove = model.graph.initializer[i]
+#                     model.graph.initializer.remove(init_to_remove)
+#                     node.input[1] = ''
+#                     graph_modified = True
+#         return (model, graph_modified)
 
 
 class RemoveStaticGraphInputs(Transformation):
