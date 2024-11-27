@@ -122,7 +122,6 @@ class RemoveIdentityOps(Transformation):
 
 class RemoveSuccessiveIdenticalQuant(Transformation):
     def apply(self, model):
-        graph_modified = False
         graph = model.graph
         graph_modified = False
         for n in graph.node:

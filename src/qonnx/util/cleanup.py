@@ -36,7 +36,6 @@ from qonnx.transformation.general import (
     GiveReadableTensorNames,
     GiveUniqueNodeNames,
     GiveUniqueParameterTensors,
-    FillEmptyRoI,
     RemoveStaticGraphInputs,
     RemoveUnusedTensors,
 )
